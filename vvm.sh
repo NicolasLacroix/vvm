@@ -24,7 +24,8 @@ FLAGS:
     install         Install the specified version
     uninstall       Uninstall the specified version
     current         Show the current activated version
-    run             Run the given script using the specified version
+    (not implemented yet) use             Change the current V version
+    (not implemented yet) run             Run the given script using the specified version
     version         Show the current vvm version
     help            Print help information
 EOF
@@ -52,6 +53,11 @@ detect_release() {
 
 panic_install() {
   echo -e "\nFailed to download version. Please report this error to the maintainer."
+  DWL_FILE_PATH=$1
+  if [ -f $DWL_FILE_PATH ]; then
+    # cleaning possible empty zip after download error
+    rm $DWL_FILE_PATH
+  fi
   exit -1
 }
 
@@ -64,32 +70,51 @@ download_version() {
 }
 
 install_version() {
-  # TODO: check version before installing (exists? already installed?)
+  # TODO: check version before installing (exists?)
   VERSION=$1
   detect_release
+  EXTRACT_PATH="$VVM_DIRECTORY/$VERSION.$RELEASE"
+  if [ -d "$EXTRACT_PATH" ]; then
+    echo "Version $VERSION already installed ($EXTRACT_PATH)"
+    exit -1  # TODO: ask to reinstall
+  fi
   DWL_FILE_PATH="$VVM_DIRECTORY/$VERSION.$RELEASE.zip"
   # TODO: check that version exists before downloading
   echo -n "Downloading..."
-  download_version $VERSION || download_version_vprefix $VERSION || panic_install
+  download_version $VERSION || download_version_vprefix $VERSION || panic_install $DWL_FILE_PATH
   echo "done"
   echo -n "Extracting..."
-  unzip $DWL_FILE_PATH -d "$VVM_DIRECTORY/$VERSION.$RELEASE" >/dev/null # TODO: check unzip availability in different OS
+  unzip $DWL_FILE_PATH -d $EXTRACT_PATH >/dev/null # TODO: check unzip availability in different OS
+  if [ -d "$EXTRACT_PATH/v" ]; then
+    # flattening zip result
+    mv $EXTRACT_PATH/v $EXTRACT_PATH/v_tmp
+    mv $EXTRACT_PATH/v_tmp/* $EXTRACT_PATH/
+    rm -rf "$EXTRACT_PATH/v_tmp/"
+  fi
   echo "done"
   exit 0
+}
+
+panic_uninstall_not_installed() {
+  VERSION=$1
+  echo -e "error\nVersion $VERSION is not installed."
+  exit -1
 }
 
 uninstall_version() {
   # TODO: check version before installing (exists? not installed?)
   VERSION=$1
   detect_release
-  VERSION_ZIP_FILE="$VVM_DIRECTORY/$VERSION.$RELEASE.zip"
   echo -n "Uninstalling v$VERSION..."
-  if [ -f $VERSION_ZIP_FILE ]; then
-    rm $VERSION_ZIP_FILE
-  fi
   VERSION_DIRECTORY="$VVM_DIRECTORY/$VERSION.$RELEASE"
   if [ -d "$VERSION_DIRECTORY" ]; then
     rm -rf $VERSION_DIRECTORY
+  else
+    panic_uninstall_not_installed $VERSION
+  fi
+  VERSION_ZIP_FILE="$VVM_DIRECTORY/$VERSION.$RELEASE.zip"
+  if [ -f $VERSION_ZIP_FILE ]; then
+    rm $VERSION_ZIP_FILE
   fi
   echo "done"
 }
@@ -111,6 +136,18 @@ initialize() {
     echo "done"
     echo "vvm version to check vvm is installed."
   fi
+}
+
+parse_current_version() {
+  CURRENT_VERSION=$(./vvm.sh current | sed -E "s:V ([^ ]+) .*:\1:")
+}
+
+change_version() {
+  VERSION=$1
+  parse_current_version
+  NEW_EXE_PATH="$CURRENT_VERSION.$DETECTED_OS/v"
+  echo $NEW_EXE_PATH
+  # TODO: export NEW_EXE_PATH  
 }
 
 check_vvm_is_initialized() {
@@ -141,7 +178,7 @@ if (($# > 0)); then
     if [ ! -z "$installed" ]; then
       echo "Installed V versions:"
       detect_release
-      echo $installed | tr ' ' '\n' | sed -r "s:$VVM_DIRECTORY\/([^ ]+).$RELEASE\/.*:\1:" | sort -r
+      echo $installed | tr ' ' '\n' | sed -E "s:$VVM_DIRECTORY\/([^ ]+).$RELEASE\/.*:\1:" | sort -r
     else
       echo "No V version installed."
     fi
@@ -161,6 +198,10 @@ if (($# > 0)); then
   current)
     check_vvm_is_initialized
     v version
+    exit 0
+    ;;
+  use)
+    change_version $2
     exit 0
     ;;
   run)
