@@ -24,7 +24,7 @@ FLAGS:
     install         Install the specified version
     uninstall       Uninstall the specified version
     current         Show the current activated version
-    (not implemented yet) use             Change the current V version
+    use             Change the current V version
     (not implemented yet) run             Run the given script using the specified version
     version         Show the current vvm version
     help            Print help information
