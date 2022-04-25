@@ -58,6 +58,7 @@ panic_install() {
     # cleaning possible empty zip after download error
     rm $DWL_FILE_PATH
   fi
+  INSTALL_ERROR=1
   return -1
 }
 
@@ -82,6 +83,9 @@ install_version() {
   # TODO: check that version exists before downloading
   echo -n "Downloading..."
   download_version $VERSION || download_version_vprefix $VERSION || panic_install $DWL_FILE_PATH
+  if [ $INSTALL_ERROR ]; then
+    return -1
+  fi
   echo "done"
   echo -n "Extracting..."
   unzip $DWL_FILE_PATH -d $EXTRACT_PATH >/dev/null # TODO: check unzip availability in different OS
@@ -102,7 +106,7 @@ panic_uninstall_not_installed() {
 }
 
 uninstall_version() {
-  # TODO: check version before installing (exists? not installed?)
+  # TODO: check version before installing (exists?)
   VERSION=$1
   detect_release
   echo -n "Uninstalling v$VERSION..."
