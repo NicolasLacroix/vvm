@@ -153,26 +153,28 @@ change_version() {
   fi
 }
 
-check_vvm_is_initialized() {
+check_vvm_installation() {
   if ! vvm_directory_exists; then
     echo "vvm directory not found..."
-    echo "try vvm init to install vvm"
-    # TODO: echo "Do you want to install vvm?"
-    return -1
+    read -p "Do you want to install vvm? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit -1
+    wget -q https://raw.githubusercontent.com/NicolasLacroix/vvm/develop/install.sh -O install.sh >/dev/null
+    bash install.sh &&
+    rm install.sh
+    exit 0
   fi
 }
 
 if (($# > 0)); then
   case $1 in
   list)
-    check_vvm_is_initialized
+    check_vvm_installation
     refresh_versions
     echo "Available V versions:"
     sed -n -e '/^##/p' /home/jonathan/.vvm/CHANGELOG.md | sed -e 's/## V //g' | sed -e 's/ - /\n/g' | sort -r
     return 0
     ;;
   installed)
-    check_vvm_is_initialized
+    check_vvm_installation
     installed=$(ls -d /home/jonathan/.vvm/*/ 2>/dev/null || echo "")
     if [ ! -z "$installed" ]; then
       echo "Installed V versions:"
@@ -184,18 +186,18 @@ if (($# > 0)); then
     return 0
     ;;
   install)
-    check_vvm_is_initialized
+    check_vvm_installation
     refresh_versions
     install_version $2
     return 0
     ;;
   uninstall)
-    check_vvm_is_initialized
+    check_vvm_installation
     uninstall_version $2
     return 0
     ;;
   current)
-    check_vvm_is_initialized
+    check_vvm_installation
     v version
     return 0
     ;;
@@ -204,12 +206,12 @@ if (($# > 0)); then
     return 0
     ;;
   run)
-    check_vvm_is_initialized
+    check_vvm_installation
     usage # TODO
     return 0
     ;;
   version)
-    check_vvm_is_initialized
+    check_vvm_installation
     echo "vvm (version $VVM_VERSION)"
     return 0
     ;;
